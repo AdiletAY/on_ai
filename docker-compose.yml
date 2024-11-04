@@ -1,0 +1,40 @@
+services:
+  database:
+    container_name: onai_db
+    image: postgres
+    env_file:
+      - .env
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    ports:
+      - "6432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - onai-network
+
+  backend:
+    container_name: onai-backend
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: [ "./docker/app.sh" ]
+    ports:
+      - "8000:8080"
+    volumes:
+      - .:/onai
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - onai-network
+
+networks:
+  onai-network:
+    driver: bridge
